@@ -29,7 +29,7 @@ initializeDBAndServer();
 app.post("/register/", async (request, response) => {
   const { name, username, password, gender, location } = request.body;
   const getUser = `select * from user where username='${username}';`;
-  const hashedPassword = bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(password, 10);
   const dbUser = await db.get(getUser);
   if (dbUser === undefined) {
     if (password.length > 5) {
@@ -43,7 +43,31 @@ app.post("/register/", async (request, response) => {
       response.send("Password is too short");
     }
   } else {
+    const updateQuery = `update user set password='${hashedPassword}' where username='${username}';`;
+    await db.run(updateQuery);
     response.status(400);
     response.send("User already exists");
+  }
+});
+
+app.post("/login/", async (request, response) => {
+  const { username, password } = request.body;
+  //   console.log(password);
+  //   console.log(hashedPassword);
+  const getUser = `select *  from user where username='${username}';`;
+  const dbUser = await db.get(getUser);
+  console.log(dbUser);
+  if (dbUser === undefined) {
+    response.status(400);
+    response.send("Invalid user");
+  } else {
+    const comparePassword = await bcrypt.compare(password, dbUser.password);
+    if (comparePassword) {
+      response.status(200);
+      response.send("Login success!");
+    } else {
+      response.status(400);
+      response.send("Invalid password");
+    }
   }
 });
